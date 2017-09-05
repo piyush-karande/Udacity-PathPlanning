@@ -24,6 +24,21 @@ The maximum velocity of the car is set to 49.50mph. This helps the car drive bel
 
 **3. Max Acceleration and Jerk are not Exceeded.**
 
+In the speed control section of the code, the acceleration is set to 5m/sec<sup>2</sup>. This prevents the car from exceeding the acceleration and jerk. The only times the car might accelerate faster than the set value is while turning. However, the acceleration is set much below the max limit of 10m/sec<sup>2</sup> and thus never exceeds this limit.
+
+**4. Car does not have collisions.**
+
+The car is set to slow down when it sees a another vehicle in its lane. It is also programmed to execute lane changes while there are no vehicles too close to the car in the lane it is planning to move to. The implementation of these two behaviors ensures that the car does not collide with other vehicles.
+
+**5. The car stays in its lane, except for the time between changing lanes.**
+
+The trajectory is created with the intention of keeping the car in the lane while smoothly following the curves in the path. Lane changes are executed by using a spline fit and the car doesnt stay between lanes for very long.
+
+**6. The car is able to change lanes.**
+
+Lane changes are executed when desired by setting the d value of trajectory to the center of the desired lane. By using a combination of spline fit and residual points from previous path from the simulator, the car is able to change lanes smoothly. The controlled car makes a lane change plan when it behind a slower vehicle and its speed has reduced below 45mph. It stays behind the car until it can safely move to an adjacent lane or if the car speeds up and the controlled car is maintaining a speed above 49mph.
+
+### Reflections ###
 
 
 
