@@ -506,7 +506,7 @@ int main() {
           The following set of code is similar to the one in walk through video
           *****/
 
-          // Vector of evenly spaced points to create a trajectory spline 
+          // Vector of evenly spaced points to create a trajectory spline
           vector<double> ptsx;
           vector<double> ptsy;
 
@@ -526,7 +526,7 @@ int main() {
 
             ptsy.push_back(prev_y);
             ptsy.push_back(car_y);
-          } else { // Use last two points from previous trajectory for smoothness 
+          } else { // Use last two points from previous trajectory for smoothness
             double ref_prev_x = previous_path_x[prev_size - 2];
             double ref_prev_y = previous_path_y[prev_size - 2];
 
