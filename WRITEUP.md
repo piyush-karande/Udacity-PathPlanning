@@ -24,7 +24,7 @@ The maximum velocity of the car is set to 49.50mph. This helps the car drive bel
 
 **3. Max Acceleration and Jerk are not Exceeded.**
 
-In the speed control section of the code, the acceleration is set to 5m/sec<sup>2</sup>. This prevents the car from exceeding the acceleration and jerk. The only times the car might accelerate faster than the set value is while turning. However, the acceleration is set much below the max limit of 10m/sec<sup>2</sup> and thus never exceeds this limit.
+In the speed control section of the code, the acceleration is set to either 5 or 7.5 m/sec<sup>2</sup>. This prevents the car from exceeding the acceleration and jerk. The only times the car might accelerate faster than the set value is while turning. However, the acceleration is set much below the max limit of 10m/sec<sup>2</sup> and thus never exceeds this limit.
 
 **4. Car does not have collisions.**
 
@@ -51,13 +51,19 @@ The path planning uses the spline tool for generating smooth trajectories. It us
 The car starts out with a reference velocity of zero and slowly (5m/sec<sup>2</sup>) ramps up. The piece of code that controls this is in main.cpp and shown below:
 
 ```cpp
-// Setting min_vel of car when another car is too close in same lane
+// Setting min_vel and acceleration of car when another car is too close in same lane
 double min_vel = front_car_vel - 2.0;
-if (curr_front_car_dist < 15) { min_vel = 0.0; }
+double acc = 0.224; // .224mph every 20msecs is approximately 5m/s^2
+
+// Higher deccelaration and 0 min_vel when vehicle very close
+if ((curr_front_car_dist < double(FRONT_DIST) / 2) || count > 1) {
+  min_vel = 0.0;
+  acc = 0.336;  // .336mph every 20msecs is approximately 7.5m/s^2
+}
 
 // Speed control if too close to a car
 if (too_close && (ref_vel > min_vel)) {
-  ref_vel -= .224; // Decrease ref_vel, .224mph every 20msecs is approximately 5m/s
+  ref_vel -= acc; // Decrease ref_vel
   if (count > 1) {
     cout << "Num cars too close: " << count << endl;
   }
@@ -65,8 +71,9 @@ if (too_close && (ref_vel > min_vel)) {
   // Start planning for lane change if speed below 45mph
   if (ref_vel < 45) { check_lanes = true; }
 } else if (ref_vel < 49.50) {
-ref_vel += 0.224; // If no car is too close maintain speed right below 50mph
+  ref_vel += acc; // If no car is too close maintain speed right below 50mph
 } else if (ref_vel > 49.0) { check_lanes = false; } // Dont check lanes if velocity is > 49mph
+
 
 ```
 
@@ -74,7 +81,7 @@ From the code above its seen that the car ramps up to 49.5mph and stays there un
 
 **3. Safe and efficient navigation**
 
-As mentioned above, because the car is in a highway driving environment its behavior can be controlled by following simple strategies. In 1 and 2 it was described how the car follows a smooth trajectory and maintains the speed. The rest of the code in main() in main.cpp controls behavior of the car for safe and efficient navigation. The biggest part of navigation on the highway is changing lanes when required. The car attempts to do so only when it is stuck behind a slower vehicle and cannot efficiently drive on the highway at a speed close to speed limit (50mph).  The program first uses the sensor fusion data to detect any cars that are in the current lane the controlled car is driving in. If it finds a car in the current lane, it tries to determine if it is "too close" (30m) ahead. This is shown below:
+As mentioned above, because the car is in a highway driving environment its behavior can be controlled by following simple strategies. In 1 and 2 it was described how the car follows a smooth trajectory and maintains the speed. The rest of the code in main() in main.cpp controls behavior of the car for safe and efficient navigation. The biggest part of navigation on the highway is changing lanes when required. The car attempts to do so only when it is stuck behind a slower vehicle and cannot efficiently drive on the highway at a speed close to speed limit (50mph).  The program first uses the sensor fusion data to detect any cars that are in the current lane the controlled car is driving in. If it finds a car in the current lane, it tries to determine if it is "too close" (50m) ahead. This is shown below:
 
 ```cpp
 // Check for cars in lane
@@ -92,7 +99,7 @@ for (int i = 0; i < sensor_fusion.size(); i++) {
     curr_car_s += (double)prev_size * 0.02 * curr_car_speed;
 
     // If car is too close
-    if ((curr_car_s > car_s) && (curr_car_s - car_s < 30)) {
+    if ((curr_car_s > car_s) && (curr_car_s - car_s < FRONT_DIST)) {
       // Set too_close flag
       too_close = true;
 
@@ -111,7 +118,7 @@ for (int i = 0; i < sensor_fusion.size(); i++) {
 }
 ```
 
-As seen, the program sets a flag if there are cars too close and passes it on to the speed control as described in 2. The speed control section of the code also sets the check_lane flag for starting a lane change attempt when the speed goes below 45mph. Ones the check_lane flag is set, the program checks either left, right or both lanes to move into. The section of the code in lines 327-420 in main.cpp checks the left and right lanes. It is basically the same as above code with setting different lane number to check for vehicles. It also records s values of vehicles that are ahead in the checked lanes but, out of "vicinity". This is used for picking one of the two lanes when both are available to change to.
+As seen, the program sets a flag if there are cars too close and passes it on to the speed control as described in 2. The speed control section of the code also sets the check_lane flag for starting a lane change attempt when the speed goes below 45mph. Ones the check_lane flag is set, the program checks either left, right or both lanes to move into. The section of the code in lines 334-428 in main.cpp checks the left and right lanes. It is basically the same as above code with setting different lane number to check for vehicles. It also records s values of vehicles that are ahead in the checked lanes but, out of "vicinity". This is used for picking one of the two lanes when both are available to change to.
 
 If the car is in the middle lane and it is safe to move to either of the adjacent lanes, a simple heuristic makes the decision which lane to pick. The program checks the closest vehicle in each lane and moves to the lane where the vehicle is further away. This helps in reducing the number of lane changes the car needs to make on an average. The code snippet performing the lane change is below and can be found in main.cpp
 

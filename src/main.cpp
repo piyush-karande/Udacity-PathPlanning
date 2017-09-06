@@ -10,6 +10,9 @@
 #include "json.hpp"
 #include "spline.h"
 
+#define FRONT_DIST 50
+#define BACK_DIST 15
+
 using namespace std;
 
 // for convenience
@@ -254,7 +257,7 @@ int main() {
           bool check_lane_left = false;
           bool check_lane_right = false;
           double front_car_vel = 2.0;
-          double curr_front_car_dist = 50.0;
+          double curr_front_car_dist = 60.0;
           int count = 0;
 
           // Check for cars in lane
@@ -272,7 +275,7 @@ int main() {
               curr_car_s += (double)prev_size * 0.02 * curr_car_speed;
 
               // If car is too close
-              if ((curr_car_s > car_s) && (curr_car_s - car_s < 30)) {
+              if ((curr_car_s > car_s) && (curr_car_s - car_s < FRONT_DIST)) {
                 // Set too_close flag
                 too_close = true;
 
@@ -286,19 +289,23 @@ int main() {
                     cout << "Updated front car, dist: " << curr_front_car_dist << ", vel: " << front_car_vel << "mph" << endl ;
                   }
                 }
-
-
               }
             }
           }
 
-          // Setting min_vel of car when another car is too close in same lane
+          // Setting min_vel and acceleration of car when another car is too close in same lane
           double min_vel = front_car_vel - 2.0;
-          if (curr_front_car_dist < 15) { min_vel = 0.0; }
+          double acc = 0.224; // .224mph every 20msecs is approximately 5m/s^2
+
+          // Higher deccelaration and 0 min_vel when vehicle very close
+          if ((curr_front_car_dist < double(FRONT_DIST) / 2) || count > 1) {
+            min_vel = 0.0;
+            acc = 0.336;  // .336mph every 20msecs is approximately 7.5m/s^2
+          }
 
           // Speed control if too close to a car
           if (too_close && (ref_vel > min_vel)) {
-            ref_vel -= .224; // Decrease ref_vel, .224mph every 20msecs is approximately 5m/s
+            ref_vel -= acc; // Decrease ref_vel
             if (count > 1) {
               cout << "Num cars too close: " << count << endl;
             }
@@ -306,7 +313,7 @@ int main() {
             // Start planning for lane change if speed below 45mph
             if (ref_vel < 45) { check_lanes = true; }
           } else if (ref_vel < 49.50) {
-            ref_vel += 0.224; // If no car is too close maintain speed right below 50mph
+            ref_vel += acc; // If no car is too close maintain speed right below 50mph
           } else if (ref_vel > 49.0) { check_lanes = false; } // Dont check lanes if velocity is > 49mph
 
           // Check elapsed time sinc eprevious lane change
@@ -357,11 +364,11 @@ int main() {
                 curr_car_s += (double)prev_size * 0.02 * curr_car_speed;
 
                 // Car too close behind or in front
-                if ((car_s > curr_car_s) && (car_s - curr_car_s < 10)) {
+                if ((car_s > curr_car_s) && (car_s - curr_car_s < BACK_DIST)) {
                   no_car_behind = false;
                   car_count_left += 1;
 
-                } else if ((curr_car_s > car_s) && (curr_car_s - car_s < 30)) {
+                } else if ((curr_car_s > car_s) && (curr_car_s - car_s < FRONT_DIST)) {
                   no_car_front = false;
                   car_count_left += 1;
 
@@ -397,12 +404,12 @@ int main() {
                 // predict car's position in future
                 curr_car_s += (double)prev_size * 0.02 * curr_car_speed;
 
-                if ((car_s > curr_car_s) && (car_s - curr_car_s < 10)) {
+                if ((car_s > curr_car_s) && (car_s - curr_car_s < BACK_DIST)) {
 
                   no_car_behind = false;
                   car_count_right += 1;
 
-                } else if ((curr_car_s > car_s) && (curr_car_s - car_s < 30)) {
+                } else if ((curr_car_s > car_s) && (curr_car_s - car_s < FRONT_DIST)) {
 
                   no_car_front = false;
                   car_count_right += 1;
