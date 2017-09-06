@@ -111,9 +111,78 @@ for (int i = 0; i < sensor_fusion.size(); i++) {
 }
 ```
 
-As seen, the program sets a flag if there are cars too close and passes it on to the speed control as described in 2. The speed control section of the code also sets the check_lane flag for starting a lane change attempt when the speed goes below 45mph. Ones the check_lane flag is set, the program check either left, right or both lanes to move into. The section of the code in lines 327-420 in main.cpp checks the left and right lanes. It is basically the same as above code with setting different lane number to check for vehicles. It also records vehicles that ahead in the checked lanes out of vicinity. This is used for picking one of the two lanes when both are available to change to.
+As seen, the program sets a flag if there are cars too close and passes it on to the speed control as described in 2. The speed control section of the code also sets the check_lane flag for starting a lane change attempt when the speed goes below 45mph. Ones the check_lane flag is set, the program checks either left, right or both lanes to move into. The section of the code in lines 327-420 in main.cpp checks the left and right lanes. It is basically the same as above code with setting different lane number to check for vehicles. It also records s values of vehicles that are ahead in the checked lanes but, out of "vicinity". This is used for picking one of the two lanes when both are available to change to.
 
+If the car is in the middle lane and it is safe to move to either of the adjacent lanes, a simple heuristic makes the decision which lane to pick. The program checks the closest vehicle in each lane and moves to the lane where the vehicle is further away. This helps in reducing the number of lane changes the car needs to make on an average. The code snippet perfoming the lane change is below and can be found in main.cpp
 
+```cpp
+// If both flags are set, pick a lane to move to
+if (move_left && move_right) {
 
+  cout << "Picking a lane.. " << endl;
 
+  // Check the closest car in adjacent lanes
+  double min_dist_left = 0;
+  double min_dist_right = 0;
+
+  // Check the average distance of cars in the adjacent lanes
+  double avg_dist_left = 0;
+  double avg_dist_right = 0;
+
+  // If no car is present in adjancent lane, move to that lane with a preference to left lane
+  if (car_dist_left.size() == 0 ) {
+    min_dist_left = 1000;
+    cout << "No cars detected on left side" << endl;
+  } else if (car_dist_right.size() == 0 ) {
+    min_dist_right = 1000;
+    cout << "No cars detected on right side" << endl;
+  } else {
+    double avg_dist_left = accumulate(car_dist_left.begin(), car_dist_left.end(), 0.0) / car_dist_left.size();
+    double avg_dist_right = accumulate(car_dist_right.begin(), car_dist_right.end(), 0.0) / car_dist_right.size();
+
+    sort(car_dist_left.begin(), car_dist_left.end());
+    sort(car_dist_right.begin(), car_dist_right.end());
+
+    min_dist_left = car_dist_left[0];
+    min_dist_right = car_dist_right[0];
+
+    cout << "Left Avg dist: " << avg_dist_left << ", Closest car at: " << min_dist_left << endl;
+    cout << "Right Avg dist: " << avg_dist_right << ", Closest car at: " << min_dist_right << endl;
+
+  }
+
+  // Move to the lane where the closest car is futher away
+  if (min_dist_left > min_dist_right) {
+    cout << "Moving one lane to the left!!" << endl << endl;
+    if (lane == 1) { lane = 0; }
+    else if (lane == 2) { lane = 1; }
+    start = std::chrono::system_clock::now(); // restart timer
+    check_lanes = false; // set check_lanes to false
+  } else {
+    cout << "Moving one lane to the right!!" << endl << endl;
+    if (lane == 0) { lane = 1; }
+    else if (lane == 1) { lane = 2; }
+    start = std::chrono::system_clock::now();
+    check_lanes = false;
+  }
+} else if (move_left) { // Move left
+  cout << "Moving one lane to the left!!" << endl << endl;
+  if (lane == 1) { lane = 0; }
+  else if (lane == 2) { lane = 1; }
+  start = std::chrono::system_clock::now();
+  check_lanes = false;
+
+} else if (move_right) { // Move right
+  cout << "Moving one lane to the right!!" << endl << endl;
+  if (lane == 0) { lane = 1; }
+  else if (lane == 1) { lane = 2; }
+  start = std::chrono::system_clock::now();
+  check_lanes = false;
+
+}
+```
+
+The timer being restarted at the end of lane change is used to avoid multiple lane changes. The program uses to this timer to force the car to wait at least 10secs between consecutive lane changes. The choice of using this timer was made to give the planner enough time to make a decision about multiple lane changes. It also prevents the controlled vehicle from becoming a "rogue driver" that keeps switching one lane to another eventually causing safety concerns to the rest of the traffic.
+
+Thus, by following these simple behavioral stratergies the path planner is safely and effectively able to navigate through the traffic in the highway setting of the simulator.
 
